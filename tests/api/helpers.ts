@@ -27,7 +27,7 @@ export async function apiRequest<T = any>(
       body: options?.body ? JSON.stringify(options.body) : undefined,
     });
 
-    const data = await response.json().catch(() => ({}));
+    const data = (await response.json().catch(() => ({}) as T)) as T;
 
     return {
       status: response.status,
