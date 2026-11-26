@@ -1,14 +1,26 @@
 // cypress/e2e/produtos.cy.ts
-import { API } from '../support/api';
+import { API, setAuthToken } from '../support/api';
 
 describe('Testes de API - Produtos', () => {
   let produtoId: string;
+  const usuarioAdmin = {
+    email: 'fulano@qa.com',
+    password: 'teste',
+  };
   const novoProduto = {
     nome: `Produto Teste ${Date.now()}`,
     preco: 100,
     descricao: 'Um produto de teste',
     quantidade: 10,
   };
+
+  before(async () => {
+    // Login and set token
+    const loginResponse = await API.login.executar(usuarioAdmin);
+    if (loginResponse.status === 200) {
+      setAuthToken(loginResponse.data.authorization);
+    }
+  });
 
   it('Deve listar todos os produtos', async () => {
     const response = await API.produtos.listar();

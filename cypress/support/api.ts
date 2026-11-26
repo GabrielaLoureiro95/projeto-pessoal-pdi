@@ -1,10 +1,24 @@
 // cypress/support/api.ts
 export const API_BASE_URL = 'http://localhost:3000';
 
+let authToken = '';
+
 export interface ApiResponse<T = any> {
   status: number;
   data: T;
   headers: Record<string, any>;
+}
+
+export function setAuthToken(token: string) {
+  authToken = token;
+}
+
+export function getAuthToken() {
+  return authToken;
+}
+
+export function clearAuthToken() {
+  authToken = '';
 }
 
 export async function apiRequest<T = any>(
@@ -16,10 +30,15 @@ export async function apiRequest<T = any>(
   }
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options?.headers,
   };
+
+  // Add token if available
+  if (authToken) {
+    headers['Authorization'] = authToken;
+  }
 
   const response = await fetch(url, {
     method,

@@ -8,4 +8,10 @@ export default defineConfig({
     },
     specPattern: 'cypress/e2e/**/*.cy.ts',
   },
+  component: {
+    devServer: {
+      framework: 'next',
+      bundler: 'webpack',
+    },
+  },
 });

@@ -1,18 +1,38 @@
 // cypress/e2e/carrinhos.cy.ts
-import { API } from '../support/api';
+import { API, setAuthToken, clearAuthToken } from '../support/api';
 
 describe('Testes de API - Carrinhos', () => {
   let produtoId: string;
+  let carrinhoId: string;
+  const usuarioAdmin = {
+    email: 'fulano@qa.com',
+    password: 'teste',
+  };
 
   before(async () => {
+    // Login and set token
+    const loginResponse = await API.login.executar(usuarioAdmin);
+    if (loginResponse.status === 200) {
+      setAuthToken(loginResponse.data.authorization);
+    }
+
     // Criar um produto para usar nos testes
     const produtoResponse = await API.produtos.criar({
       nome: `Produto para Carrinho ${Date.now()}`,
       preco: 50,
-      descricao: 'Produto de teste',
+      descricao: 'Produto de teste para carrinho',
       quantidade: 100,
     });
-    produtoId = produtoResponse.data._id;
+    
+    if (produtoResponse.status === 201) {
+      produtoId = produtoResponse.data._id;
+    }
+
+    // Limpar carrinho existente se houver
+    const carrinhos = await API.carrinhos.listar();
+    if (carrinhos.data.carrinhos && carrinhos.data.carrinhos.length > 0) {
+      carrinhoId = carrinhos.data.carrinhos[0]._id;
+    }
   });
 
   it('Deve listar todos os carrinhos', async () => {
@@ -23,79 +43,95 @@ describe('Testes de API - Carrinhos', () => {
     expect(Array.isArray(response.data.carrinhos)).to.be.true;
   });
 
-  it('Deve validar estrutura de carrinho quando houver carrinhos', async () => {
-    const response = await API.carrinhos.listar();
-    expect(response.status).to.equal(200);
-    
-    // Se existem carrinhos, valida sua estrutura
-    if (response.data.carrinhos && response.data.carrinhos.length > 0) {
-      const carrinho = response.data.carrinhos[0];
-      expect(carrinho).to.have.property('_id');
-      expect(carrinho).to.have.property('produtos');
-      expect(Array.isArray(carrinho.produtos)).to.be.true;
-      
-      // Se há produtos no carrinho, valida sua estrutura
-      if (carrinho.produtos.length > 0) {
-        const produto = carrinho.produtos[0];
-        expect(produto).to.have.property('idProduto');
-        expect(produto).to.have.property('quantidade');
-        expect(produto).to.have.property('precoUnitario');
-      }
-    }
-  });
-
-  it('Deve validar que não é possível criar segundo carrinho para mesmo usuário', async () => {
+  it('Deve criar um novo carrinho com produto', async () => {
     const novoCarrinho = {
       produtos: [
         {
           idProduto: produtoId,
-          quantidade: 1,
+          quantidade: 2,
         },
       ],
     };
     
-    // Tenta criar carrinho
     const response = await API.carrinhos.criar(novoCarrinho);
     
-    // Pode retornar 201 (sucesso) ou 400 (já tem carrinho)
-    // Dependendo do estado atual do usuário autenticado
-    expect([200, 201, 400]).to.include(response.status);
+    // Pode retornar 201 (criado) ou 400 (já existe)
+    expect([201, 400]).to.include(response.status);
+    
+    if (response.status === 201) {
+      carrinhoId = response.data._id;
+      expect(response.data).to.have.property('_id');
+      expect(response.data).to.have.property('message');
+    }
   });
 
-  it('Deve obter carrinho específico quando houver carrinhos', async () => {
-    const listarResponse = await API.carrinhos.listar();
-    expect(listarResponse.status).to.equal(200);
+  it('Deve listar carrinhos com estrutura válida', async () => {
+    const response = await API.carrinhos.listar();
+    expect(response.status).to.equal(200);
+    expect(response.data.carrinhos).to.be.an('array');
     
-    // Se existem carrinhos, tenta obter o primeiro
-    if (listarResponse.data.carrinhos && listarResponse.data.carrinhos.length > 0) {
-      const carrinhoId = listarResponse.data.carrinhos[0]._id;
-      const response = await API.carrinhos.obter(carrinhoId);
+    // Valida cada carrinho
+    response.data.carrinhos.forEach((carrinho: any) => {
+      expect(carrinho).to.have.property('_id');
+      expect(carrinho).to.have.property('produtos').that.is.an('array');
+      expect(carrinho).to.have.property('precoTotal').that.is.a('number');
+    });
+  });
+
+  it('Deve obter carrinho por ID', async () => {
+    // Primeiro obtém um carrinho
+    const listResponse = await API.carrinhos.listar();
+    
+    if (listResponse.data.carrinhos.length > 0) {
+      const carrinhoParaObter = listResponse.data.carrinhos[0];
+      const response = await API.carrinhos.obter(carrinhoParaObter._id);
       
       expect(response.status).to.equal(200);
-      expect(response.data._id).to.equal(carrinhoId);
-      expect(response.data).to.have.property('produtos');
+      expect(response.data._id).to.equal(carrinhoParaObter._id);
+      expect(response.data).to.have.property('produtos').that.is.an('array');
+      expect(response.data).to.have.property('precoTotal').that.is.a('number');
     }
   });
 
-  it('Deve validar que carrinho tem preço total calculado', async () => {
-    const listarResponse = await API.carrinhos.listar();
+  it('Deve calcular preço total corretamente', async () => {
+    const response = await API.carrinhos.listar();
     
-    if (listarResponse.data.carrinhos && listarResponse.data.carrinhos.length > 0) {
-      const carrinho = listarResponse.data.carrinhos[0];
-      
-      // Carrinhos com produtos devem ter preço total
-      if (carrinho.produtos && carrinho.produtos.length > 0) {
-        expect(carrinho).to.have.property('precoTotal');
-        expect(carrinho.precoTotal).to.be.a('number');
-        expect(carrinho.precoTotal).to.be.at.least(0);
+    response.data.carrinhos.forEach((carrinho: any) => {
+      if (carrinho.produtos.length > 0) {
+        // Calcula preço esperado
+        const precoEsperado = carrinho.produtos.reduce(
+          (total: number, prod: any) => total + (prod.precoUnitario * prod.quantidade),
+          0
+        );
+        
+        // Valida preço total
+        expect(carrinho.precoTotal).to.be.closeTo(precoEsperado, 0.01);
+      } else {
+        // Carrinho vazio deve ter preço 0
+        expect(carrinho.precoTotal).to.equal(0);
       }
-    }
+    });
+  });
+
+  it('Deve validar que carrinho vazio é válido', async () => {
+    const response = await API.carrinhos.listar();
+    expect(response.status).to.equal(200);
+    
+    // Mesmo carrinhos vazios devem ter estrutura válida
+    response.data.carrinhos.forEach((carrinho: any) => {
+      expect(carrinho).to.have.property('_id');
+      expect(carrinho).to.have.property('produtos').that.is.an('array');
+      expect(carrinho).to.have.property('precoTotal').that.is.a('number');
+    });
   });
 
   after(async () => {
     // Limpa o produto criado
-    await API.produtos.deletar(produtoId).catch(() => {
-      // Ignora erro se produto já foi deletado
-    });
+    if (produtoId) {
+      await API.produtos.deletar(produtoId).catch(() => {
+        // Ignora erro se produto já foi deletado
+      });
+    }
+    clearAuthToken();
   });
 });
