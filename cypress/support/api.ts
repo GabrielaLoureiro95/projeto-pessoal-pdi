@@ -80,6 +80,3 @@ export const API = {
     executar: (body: Record<string, any>) => apiRequest('POST', '/login', { body }),
   },
 };
-
-Cypress.Commands.add('apiRequest', apiRequest);
-Cypress.Commands.add('API', () => API);

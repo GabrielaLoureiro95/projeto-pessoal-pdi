@@ -1,3 +1,4 @@
+/// <reference types="cypress" />
 // cypress/e2e/carrinhos.cy.ts
 import { API, setAuthToken, clearAuthToken } from '../support/api';
 

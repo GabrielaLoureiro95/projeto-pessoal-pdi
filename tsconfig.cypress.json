@@ -9,7 +9,10 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
-    "types": ["cypress", "node"]
+    "types": ["cypress", "node"],
+    "rootDir": "."
   },
-  "include": ["cypress/**/*"]
+  "include": ["cypress/**/*"],
+  "exclude": ["node_modules"]
 }
+

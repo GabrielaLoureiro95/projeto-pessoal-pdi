@@ -1,4 +1,5 @@
 // tests/setup.ts
+// @ts-ignore - serverest doesn't have TypeScript types
 import { server } from 'serverest';
 
 let serverInstance: any;

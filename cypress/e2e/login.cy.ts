@@ -1,3 +1,4 @@
+/// <reference types="cypress" />
 // cypress/e2e/login.cy.ts
 import { API } from '../support/api';
 
