@@ -7,17 +7,24 @@
     "build": "tsc",
     "dev": "node src/index.ts",
     "start": "node dist/index.js",
-    "test": "cypress run",
-    "test:open": "cypress open",
-    "test:debug": "cypress run --headed"
+    "test": "bash run-tests.sh",
+    "test:jest": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "serverest:start": "serverest --no-open"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.6.11",
     "cypress": "^16.4.0",
-    "typescript": "^7.0.2"
+    "jest": "^30.5.2",
+    "serverest": "^3.5.0",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
   }
 }
