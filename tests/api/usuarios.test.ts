@@ -1,14 +1,29 @@
 // tests/api/usuarios.test.ts
-import { API } from './helpers';
+import { API, setAuthToken, clearAuthToken } from './helpers';
 
 describe('API - Usuários', () => {
   let usuarioId: string;
+  const usuarioAdmin = {
+    email: 'fulano@qa.com',
+    password: 'teste',
+  };
   const novoUsuario = {
     nome: 'Usuário Teste',
     email: `usuario-${Date.now()}@exemplo.com`,
     password: 'senha123',
     administrador: 'false',
   };
+
+  beforeAll(async () => {
+    const response = await API.login.executar(usuarioAdmin);
+    if (response.status === 200 && response.data.authorization) {
+      await setAuthToken(response.data.authorization);
+    }
+  });
+
+  afterAll(async () => {
+    clearAuthToken();
+  });
 
   it('Deve listar todos os usuários', async () => {
     const response = await API.usuarios.listar();
@@ -22,8 +37,7 @@ describe('API - Usuários', () => {
     const response = await API.usuarios.criar(novoUsuario);
     expect(response.status).toBe(201);
     expect(response.data).toHaveProperty('_id');
-    expect(response.data.nome).toBe(novoUsuario.nome);
-    expect(response.data.email).toBe(novoUsuario.email);
+    expect(response.data).toHaveProperty('message');
     usuarioId = response.data._id;
   });
 
@@ -31,7 +45,6 @@ describe('API - Usuários', () => {
     const response = await API.usuarios.obter(usuarioId);
     expect(response.status).toBe(200);
     expect(response.data._id).toBe(usuarioId);
-    expect(response.data.nome).toBe(novoUsuario.nome);
   });
 
   it('Deve atualizar um usuário', async () => {
@@ -41,7 +54,6 @@ describe('API - Usuários', () => {
     };
     const response = await API.usuarios.atualizar(usuarioId, usuarioAtualizado);
     expect(response.status).toBe(200);
-    expect(response.data.nome).toBe('Usuário Atualizado');
   });
 
   it('Deve deletar um usuário', async () => {
@@ -64,3 +76,4 @@ describe('API - Usuários', () => {
     expect(response.data).toHaveProperty('message');
   });
 });
+

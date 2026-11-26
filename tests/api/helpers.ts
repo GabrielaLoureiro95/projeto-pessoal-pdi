@@ -1,6 +1,8 @@
 // tests/api/helpers.ts
 export const API_BASE_URL = 'http://localhost:3000';
 
+let authToken: string | null = null;
+
 export interface ApiResponse<T = any> {
   status: number;
   data: T;
@@ -12,13 +14,19 @@ export async function apiRequest<T = any>(
   options?: {
     body?: Record<string, any>;
     headers?: Record<string, any>;
+    requiresAuth?: boolean;
   }
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options?.headers,
   };
+
+  // Sempre adiciona o token se disponível
+  if (authToken) {
+    headers['Authorization'] = authToken;
+  }
 
   try {
     const response = await fetch(url, {
@@ -36,6 +44,14 @@ export async function apiRequest<T = any>(
   } catch (error) {
     throw new Error(`API Request failed: ${error}`);
   }
+}
+
+export async function setAuthToken(token: string): Promise<void> {
+  authToken = token;
+}
+
+export function clearAuthToken(): void {
+  authToken = null;
 }
 
 export const API = {
