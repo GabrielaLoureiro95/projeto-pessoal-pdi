@@ -1,5 +1,5 @@
 // cypress/support/api.ts
-export const API_BASE_URL = 'https://serverest.dev/api';
+export const API_BASE_URL = 'http://localhost:3000';
 
 export interface ApiResponse<T = any> {
   status: number;
